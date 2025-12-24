@@ -1,27 +1,50 @@
 package com.hmdp.utils;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.UserDTO;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
+
+@Component  // 让Spring管理这个拦截器
 public class LoginIntercepter implements HandlerInterceptor {
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        //1.获取session
-        HttpSession session = request.getSession();
-        //2.获取session中用户
-        Object user = session.getAttribute("user");
+        //1.获取请求头的token
+        String token = request.getHeader("authorization");
+        if (StrUtil.isBlank(token)) {
+            //不存在，拦截
+            response.setStatus(401);
+            return false;
+        }
+        //2.用token获取redis中用户 entries相当于getAll
+        Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(LOGIN_USER_KEY + token);
         //3.判断用户是否存在
-        if (user == null) {
+        if (userMap.isEmpty()) {
             //4.不存在，拦截
             response.setStatus(401);
             return false;
         }
-        //5.存在，保存用户信息到ThreadLocal
-        UserHolder.saveUser((UserDTO) user);
+        //5.将查询得到hash转化成dto
+        UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
+        //6.刷新token有效期
+        stringRedisTemplate.expire(LOGIN_USER_KEY + token, LOGIN_USER_TTL, TimeUnit.MINUTES);
+        //7.存在，保存用户信息到ThreadLocal
+        UserHolder.saveUser((UserDTO) userDTO);
         return true;
     }
 
