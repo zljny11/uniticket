@@ -75,8 +75,10 @@ public class BlogController {
         records.forEach(blog ->{
             Long userId = blog.getUserId();
             User user = userService.getById(userId);
-            blog.setName(user.getNickName());
-            blog.setIcon(user.getIcon());
+            if (user != null) {
+                blog.setName(user.getNickName());
+                blog.setIcon(user.getIcon());
+            }
         });
         return Result.ok(records);
     }

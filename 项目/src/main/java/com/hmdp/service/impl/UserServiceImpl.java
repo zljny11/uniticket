@@ -1,9 +1,11 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
@@ -52,8 +54,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             //不存在，创建新用户并保存
             user = createUserWithPhone(phone);
         }
-        //保存用户信息到session
-        session.setAttribute("user", user);
+        //保存用户信息到session（转换为UserDTO避免敏感信息泄露）
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        session.setAttribute("user", userDTO);
         return Result.ok();
     }
 
@@ -61,7 +64,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         User user = new User();
         user.setPhone(phone);
         user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
-        save(user);
+        save(user);  // 保存到数据库
         return user;
     }
 }
