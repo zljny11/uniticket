@@ -10,7 +10,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -19,25 +18,23 @@ import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 
 @Component  // 让Spring管理这个拦截器
-public class LoginIntercepter implements HandlerInterceptor {
+public class RefreshTokenInterceptor implements HandlerInterceptor {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        //1.获取请求头的token
+        // 1、获取token，并判断token是否存在
         String token = request.getHeader("authorization");
         if (StrUtil.isBlank(token)) {
-            //不存在，拦截
-            response.setStatus(401);
-            return false;
+            // token不存在，说明当前用户未登录，不需要刷新直接放行
+            return true;
         }
         //2.用token获取redis中用户 entries相当于getAll
         Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(LOGIN_USER_KEY + token);
         //3.判断用户是否存在
         if (userMap.isEmpty()) {
-            //4.不存在，拦截
-            response.setStatus(401);
-            return false;
+            //4.不存在，说明当前用户未登录，不需要刷新直接放行
+            return true;
         }
         //5.将查询得到hash转化成dto
         UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
