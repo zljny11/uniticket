@@ -1,16 +1,17 @@
 package com.hmdp.service;
 
-import com.hmdp.entity.VoucherOrder;
+import com.hmdp.entity.TicketOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * <p>
- *  服务类
+ * TicketOrder Service - 票务订单服务接口
+ * Legacy name retained for compatibility
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author UniTicket Team
+ * @since 2024-12-26
  */
-public interface IVoucherOrderService extends IService<VoucherOrder> {
+public interface IVoucherOrderService extends IService<TicketOrder> {
 
 }

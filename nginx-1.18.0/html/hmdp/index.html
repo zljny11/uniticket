@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
+  <title>UniTicket - 校园票务</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="./css/element.css">
 
@@ -19,23 +19,23 @@
 <body>
 <div id="app">
   <div class="search-bar">
-    <div class="city-btn">杭州 <i class="el-icon-arrow-down"></i></div>
+    <div class="city-btn">NTU <i class="el-icon-arrow-down"></i></div>
     <div class="search-input">
-      <el-input size="mini" placeholder="请输入商户名、地点">
+      <el-input size="mini" placeholder="搜索活动、场馆">
         <i slot="prefix" class="el-input__icon el-icon-search"></i>
       </el-input>
     </div>
     <div class="header-icon" @click="toPage(4)"><i class="el-icon-user"></i></div>
   </div>
   <div class="type-list">
-    <div class="type-box" v-for="t in types" :key="t.id" @click="toShopList(t.id, t.name)">
+    <div class="type-box" v-for="t in types" :key="t.id" @click="toVenueList(t.id, t.name)">
       <div class="type-view"><img :src="'/imgs/' + t.icon" alt=""></div>
       <div class="type-text">{{t.name}}</div>
     </div>
   </div>
   <div class="blog-list" @scroll="onScroll">
     <div class="blog-box" v-for="b in blogs" :key="b.id">
-      <div class="blog-img" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>
+      <div class="blog-img" @click="toPostDetail(b)"><img :src="b.img" alt=""></div>
       <div class="blog-title">{{b.title}}</div>
       <div class="blog-foot">
         <div class="blog-user-icon"><img :src="b.icon || '/imgs/icons/default-icon.png'" alt=""></div>
@@ -63,18 +63,20 @@
     el: "#app",
     data: {
       isReachBottom: false,
-      types: [], // 类型列表
-      blogs: [], // 播客列表
-      current: 1,// blog的页码
+      types: [], // 活动类型列表
+      blogs: [], // 校园动态列表
+      current: 1,// 动态页码
     },
     created() {
-      // 查询类型
+      // 查询活动类型
       this.queryTypes();
-      this.queryHotBlogsScroll();
+      // 查询校园动态
+      this.queryCampusPosts();
     },
     methods: {
       queryTypes() {
-        axios.get("/shop-type/list")
+        // 调用场馆类型 API
+                axios.get("/venue-category/list")
           .then(({data}) => {
             this.types = data;
           })
@@ -82,8 +84,9 @@
             this.$message.error(err)
           })
       },
-      queryHotBlogsScroll() {
-        axios.get("/blog/hot?current=" + this.current)
+      queryCampusPosts() {
+        // 调用校园动态 API
+        axios.get("/campus-post/hot?current=" + this.current)
           .then(({data}) => {
             data.forEach(b => b.img = b.images.split(",")[0]);
             this.blogs = this.blogs.concat(data);
@@ -93,16 +96,18 @@
           })
       },
       addLike(b) {
-        axios.put("/blog/like/" +b.id)
+        // 点赞校园动态
+                axios.put("/campus-post/like/" + b.id)
           .then(({data}) => {
-            this.queryBlogById(b)
+            this.queryPostById(b)
           })
           .catch(err => {
             this.$message.error(err)
           })
       },
-      queryBlogById(b) {
-        axios.get("/blog/" + b.id)
+      queryPostById(b) {
+        // 查询动态详情
+        axios.get("/campus-post/" + b.id)
           .then(({data}) => {
             b.liked = data.liked;
             b.isLike = data.isLike;
@@ -119,18 +124,20 @@
         if (scrollTop + offsetHeight > scrollHeight && !this.isReachBottom) {
           this.isReachBottom = true
 
-          // 再次查询下一页数据
+          // 加载更多校园动态
           this.current++;
-          this.queryHotBlogsScroll();
+          this.queryCampusPosts();
         } else {
           this.isReachBottom = false
         }
       },
-      toShopList(id, name) {
-        location.href = "/shop-list.html?type=" + id + "&name=" + name
+      toVenueList(id, name) {
+        // 跳转到场馆列表
+        location.href = "/venue-list.html?type=" + id + "&name=" + name
       },
-      toBlogDetail(b) {
-        location.href = "/blog-detail.html?id=" + b.id
+      toPostDetail(b) {
+        // 跳转到动态详情
+        location.href = "/post-detail.html?id=" + b.id
       },
       toPage(page) {
         // 跳转到用户信息页面

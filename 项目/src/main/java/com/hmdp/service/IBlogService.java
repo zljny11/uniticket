@@ -1,16 +1,17 @@
 package com.hmdp.service;
 
-import com.hmdp.entity.Blog;
+import com.hmdp.entity.CampusPost;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * <p>
- *  服务类
+ * CampusPost Service - 校园动态服务接口
+ * Legacy name retained for compatibility
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author UniTicket Team
+ * @since 2024-12-26
  */
-public interface IBlogService extends IService<Blog> {
+public interface IBlogService extends IService<CampusPost> {
 
 }

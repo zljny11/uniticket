@@ -1,20 +1,20 @@
 package com.hmdp.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.hmdp.entity.Voucher;
+import com.hmdp.entity.Ticket;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
 /**
  * <p>
- *  Mapper 接口
+ *  Ticket Mapper 接口
  * </p>
  *
  * @author 虎哥
  * @since 2021-12-22
  */
-public interface VoucherMapper extends BaseMapper<Voucher> {
+public interface TicketMapper extends BaseMapper<Ticket> {
 
-    List<Voucher> queryVoucherOfShop(@Param("shopId") Long shopId);
+    List<Ticket> queryTicketOfVenue(@Param("venueId") Long venueId);
 }

@@ -1,20 +1,21 @@
 package com.hmdp.service.impl;
 
-import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.mapper.SeckillVoucherMapper;
+import com.hmdp.entity.FlashSaleConfig;
+import com.hmdp.mapper.FlashSaleConfigMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
  * <p>
- * 秒杀优惠券表，与优惠券是一对一关系 服务实现类
+ * FlashSaleConfig Service Implementation - 秒杀配置服务实现类
+ * Legacy name retained for compatibility
  * </p>
  *
- * @author 虎哥
- * @since 2022-01-04
+ * @author UniTicket Team
+ * @since 2024-12-26
  */
 @Service
-public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper, SeckillVoucher> implements ISeckillVoucherService {
+public class SeckillVoucherServiceImpl extends ServiceImpl<FlashSaleConfigMapper, FlashSaleConfig> implements ISeckillVoucherService {
 
 }

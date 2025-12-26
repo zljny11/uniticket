@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Venue;
-import com.hmdp.service.IShopService;
+import com.hmdp.service.IVenueService;
 import com.hmdp.utils.SystemConstants;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +25,7 @@ import javax.annotation.Resource;
 public class VenueController {
 
     @Resource
-    public IShopService shopService;  // Will be refactored to IVenueService later
+    public IVenueService venueService;
 
     /**
      * 根据ID查询场馆信息
@@ -36,7 +36,7 @@ public class VenueController {
      */
     @GetMapping("/{id}")
     public Result queryVenueById(@PathVariable("id") Long id) {
-        return Result.ok(shopService.getById(id));
+        return venueService.queryById(id);
     }
 
     /**
@@ -47,9 +47,9 @@ public class VenueController {
      * @return 场馆ID
      */
     @PostMapping
-    public Result saveVenue(@Request    Body Venue venue) {
+    public Result saveVenue(@RequestBody Venue venue) {
         // 写入数据库
-        shopService.save(venue);
+        venueService.save(venue);
         // 返回场馆ID
         return Result.ok(venue.getId());
     }
@@ -64,7 +64,7 @@ public class VenueController {
     @PutMapping
     public Result updateVenue(@RequestBody Venue venue) {
         // 写入数据库
-        shopService.updateById(venue);
+        venueService.updateById(venue);
         return Result.ok();
     }
 
@@ -82,7 +82,7 @@ public class VenueController {
             @RequestParam(value = "current", defaultValue = "1") Integer current
     ) {
         // 根据类型分页查询
-        Page<Venue> page = shopService.query()
+        Page<Venue> page = venueService.query()
                 .eq("type_id", typeId)
                 .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
         // 返回数据
@@ -103,7 +103,7 @@ public class VenueController {
             @RequestParam(value = "current", defaultValue = "1") Integer current
     ) {
         // 根据名称模糊查询
-        Page<Venue> page = shopService.query()
+        Page<Venue> page = venueService.query()
                 .like(StrUtil.isNotBlank(name), "name", name)
                 .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
         // 返回数据

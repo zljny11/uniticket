@@ -1,16 +1,17 @@
 package com.hmdp.service;
 
-import com.hmdp.entity.SeckillVoucher;
+import com.hmdp.entity.FlashSaleConfig;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * <p>
- * 秒杀优惠券表，与优惠券是一对一关系 服务类
+ * FlashSaleConfig Service - 秒杀配置服务接口
+ * Legacy name retained for compatibility
  * </p>
  *
- * @author 虎哥
- * @since 2022-01-04
+ * @author UniTicket Team
+ * @since 2024-12-26
  */
-public interface ISeckillVoucherService extends IService<SeckillVoucher> {
+public interface ISeckillVoucherService extends IService<FlashSaleConfig> {
 
 }
