@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
+import static com.uniticket.utils.RedisConstants.CACHE_NULL_TTL;
 import static com.uniticket.utils.RedisConstants.CACHE_VENUE_TTL;
 
 /**
@@ -32,17 +33,24 @@ public class VenueServiceImpl extends ServiceImpl<VenueMapper, Venue> implements
 
     @Override
     public Result queryById(Long id) {
+        String key = RedisConstants.CACHE_VENUE_KEY + id;
         //1.从redis查询缓存
-        String venueJson = stringRedisTemplate.opsForValue().get(RedisConstants.CACHE_VENUE_KEY + id);
+        String venueJson = stringRedisTemplate.opsForValue().get(key);
         //2.判断是否存在, 存在就直接返回
         if(StrUtil.isNotBlank(venueJson)){
             Venue venue = JSONUtil.toBean(venueJson, Venue.class);//将venueJson转换为Venue对象反序列化
             return Result.ok(venue);
         }
+        //判断venueJson是否为空字符串(缓存穿透保护)
+        if(venueJson != null&& venueJson.isEmpty()){
+            return Result.fail("Venue not found");
+        }
         //3.不存在，根据id查询数据库
         Venue venue = getById(id);
         //4.数据库不存在，返回错误
         if(venue == null){
+            //将空值写入redis
+            stringRedisTemplate.opsForValue().set(key, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
             return Result.fail("Venue not found");
         }
         //5.数据库当中存在，写入redis

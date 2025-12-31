@@ -31,8 +31,9 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/user/code",
                         "/user/login",
                         "/blog/hot",
-                        "/shop/**",
-                        "/shop-type/**",
+                        "/venue/**",
+                        "/venue-category/**",
+                        "/ticket/**",
                         "/upload/**",
                         "/voucher/**"
                 ).order(1); // 优先级默认都是0，值越大优先级越低
