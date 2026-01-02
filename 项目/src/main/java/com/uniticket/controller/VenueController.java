@@ -40,6 +40,30 @@ public class VenueController {
     }
 
     /**
+     * 逻辑过期查询（用于压测/验证）
+     * GET /venue/logic/{id}
+     */
+    @GetMapping("/logic/{id}")
+    public Result queryVenueByIdWithLogicExpire(@PathVariable("id") Long id) {
+        Venue venue = venueService.queryWithLogicExpire(id);
+        if (venue == null) {
+            return Result.fail("Venue not found");
+        }
+        return Result.ok(venue);
+    }
+
+    /**
+     * 预热单个场馆缓存（用于压测/验证）
+     * POST /venue/preheat/{id}?expireSeconds=2
+     */
+    @PostMapping("/preheat/{id}")
+    public Result preheatVenue(@PathVariable("id") Long id,
+                               @RequestParam(value = "expireSeconds", defaultValue = "2") Long expireSeconds) {
+        venueService.saveVenue2Redis(id, expireSeconds);
+        return Result.ok();
+    }
+
+    /**
      * 新增场馆信息
      * POST /venue
      * 

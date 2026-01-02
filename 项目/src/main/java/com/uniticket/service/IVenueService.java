@@ -15,5 +15,9 @@ import com.uniticket.entity.Venue;
 public interface IVenueService extends IService<Venue> {
     Result queryById(Long id);
 
+    Venue queryWithLogicExpire(Long id);
+
+    void saveVenue2Redis(Long id, Long expireSeconds);
+
     Result update(Venue venue);
 }
