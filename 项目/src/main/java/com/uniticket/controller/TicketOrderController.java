@@ -48,6 +48,6 @@ public class TicketOrderController {
         // 4. Check user purchase limit (one ticket per user)
         // 5. Atomic stock deduction using Lua script
         // 6. Create order record
-        return Result.fail("功能开发中 - Flash sale feature under development");
+        return ticketOrderService.flashSaleTicket(ticketId);
     }
 }

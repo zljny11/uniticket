@@ -20,7 +20,6 @@ import javax.annotation.Resource;
 @RestController
 @RequestMapping("/ticket")  // New RESTful route
 public class TicketController {
-
     @Resource
     private ITicketService ticketService;
 

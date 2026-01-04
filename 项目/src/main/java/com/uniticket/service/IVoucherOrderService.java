@@ -1,5 +1,6 @@
 package com.uniticket.service;
 
+import com.uniticket.dto.Result;
 import com.uniticket.entity.TicketOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -14,4 +15,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IVoucherOrderService extends IService<TicketOrder> {
 
+    Result flashSaleTicket(Long ticketId);
 }
