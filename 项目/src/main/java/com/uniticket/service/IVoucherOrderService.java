@@ -16,4 +16,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface IVoucherOrderService extends IService<TicketOrder> {
 
     Result flashSaleTicket(Long ticketId);
+
+    Result createTicketOrder(Long ticketId);
 }

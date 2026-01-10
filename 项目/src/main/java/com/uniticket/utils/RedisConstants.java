@@ -33,6 +33,27 @@ public class RedisConstants {
      */
     public static final Long CACHE_NULL_TTL = 2L;
 
+    // ==================== Multi-Level Cache Configuration ====================
+    /**
+     * 本地缓存名称常量
+     */
+    public static final String LOCAL_CACHE_VENUE = "venue";        // 场馆本地缓存
+    public static final String LOCAL_CACHE_TICKET = "ticket";      // 门票本地缓存
+    public static final String LOCAL_CACHE_USER = "user";          // 用户本地缓存
+    public static final String LOCAL_CACHE_SECKILL = "seckill";    // 秒杀配置本地缓存
+
+    /**
+     * 本地缓存 TTL 配置 (Caffeine)
+     * 本地缓存时间较短，避免数据不一致
+     */
+    public static final Long LOCAL_CACHE_TTL = 5L;                 // 5分钟
+
+    /**
+     * Redis 缓存 TTL 配置 (L2)
+     */
+    public static final Long REDIS_CACHE_TICKET_TTL = 10L;         // 门票 10分钟（高实时性）
+    public static final Long REDIS_CACHE_SECKILL_TTL = 5L;         // 秒杀配置 5分钟（高实时性）
+
     // ==================== Venue (场馆) Module ====================
     /**
      * 场馆信息缓存 Key (原 Shop)
@@ -63,6 +84,13 @@ public class RedisConstants {
      * Value: Remaining stock count
      */
     public static final String TICKET_STOCK_KEY = "uniticket:ticket:stock:";
+
+    /**
+     * 秒杀订单集合 Key (存储已购买用户ID，用于一人一单校验)
+     * Format: uniticket:ticket:order:{ticketId}
+     * Data Structure: Set
+     */
+    public static final String TICKET_ORDER_KEY = "uniticket:ticket:order:";
     
     /**
      * 秒杀订单分布式锁 Key

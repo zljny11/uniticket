@@ -6,6 +6,7 @@ import com.uniticket.dto.Result;
 import com.uniticket.entity.Venue;
 import com.uniticket.mapper.VenueMapper;
 import com.uniticket.service.IVenueService;
+import com.uniticket.service.MultiLevelCacheService;
 import com.uniticket.utils.CacheClient;
 import com.uniticket.utils.RedisConstants;
 import com.uniticket.utils.RedisData;
@@ -22,6 +23,7 @@ import static com.uniticket.utils.RedisConstants.*;
  * <p>
  * 场馆服务实现类
  * Business Context: Provides CRUD for campus venues/organizers in Singapore universities
+ * 使用多级缓存：L1(Caffeine) + L2(Redis)
  * </p>
  *
  * @author UniTicket Team
@@ -35,21 +37,26 @@ public class VenueServiceImpl extends ServiceImpl<VenueMapper, Venue> implements
     @Resource
     private CacheClient cacheClient;
 
+    @Resource
+    private MultiLevelCacheService multiLevelCacheService;
+
     @Override
     public Result queryById(Long id) {
-        //防缓存穿透
-        Venue venue = cacheClient.queryWithPassThrough(
-                CACHE_VENUE_KEY,
-                id,
-                Venue.class,
-                this::getById,
-                CACHE_VENUE_TTL,
-                TimeUnit.MINUTES
+        // 使用多级缓存：L1(Caffeine) + L2(Redis)
+        String redisKey = CACHE_VENUE_KEY + id;
+        Venue venue = multiLevelCacheService.get(
+                LOCAL_CACHE_VENUE,        // 本地缓存名称
+                redisKey,                 // Redis 完整 Key
+                id,                       // 本地缓存 Key
+                Venue.class,              // 返回类型
+                this::getById,            // 数据库查询函数
+                id,                       // 查询参数
+                CACHE_VENUE_TTL,          // Redis 缓存 TTL
+                TimeUnit.MINUTES          // 时间单位
         );
         if (venue == null) {
             return Result.fail("Venue not found");
         }
-        //6.返回
         return Result.ok(venue);
     }
 
@@ -217,11 +224,12 @@ public class VenueServiceImpl extends ServiceImpl<VenueMapper, Venue> implements
         if (id == null) {
             return Result.fail("Invalid venue ID");
         }
-        //1.更新数据库
+        // 1. 更新数据库
         updateById(venue);
-        //2.删除缓存
-        stringRedisTemplate.delete(RedisConstants.CACHE_VENUE_KEY + id);
+        // 2. 删除多级缓存
+        String redisKey = RedisConstants.CACHE_VENUE_KEY + id;
+        multiLevelCacheService.evictLocal(LOCAL_CACHE_VENUE, id);  // 删除本地缓存 L1
+        multiLevelCacheService.evictRedis(redisKey);                // 删除 Redis 缓存 L2
         return Result.ok();
-
     }
 }

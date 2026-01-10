@@ -67,7 +67,7 @@ public class Ticket implements Serializable {
     private Long actualValue;
 
     /**
-     * 票券类型 (0: 普通票, 1: 秒杀票/Flash Sale)
+     * 票券类型 (0: 普通票, 1: 秒杀票/Flash Sale 关联flashsaleconfig)
      */
     private Integer type;
 
