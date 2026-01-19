@@ -50,3 +50,13 @@ kafka:
   topic:
     seckill-order: seckill-order
     order-timeout: order-timeout
+rate-limit:
+  seckill:
+    capacity: 200
+    refill-per-second: 200
+  coupon:
+    window-ms: 60000
+    max-requests: 5
+  venue:
+    window-ms: 10000
+    max-requests: 30
