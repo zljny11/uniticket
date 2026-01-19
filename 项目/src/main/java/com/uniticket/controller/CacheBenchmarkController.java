@@ -200,12 +200,12 @@ public class CacheBenchmarkController {
             com.github.benmanes.caffeine.cache.stats.CacheStats venueStats =
                     multiLevelCacheService.getLocalCacheStats("venue");
 
-            stats.put("venueCache", Map.of(
-                    "hitRate", venueStats.hitRate() * 100,
-                    "hitCount", venueStats.hitCount(),
-                    "missCount", venueStats.missCount(),
-                    "requestCount", venueStats.requestCount()
-            ));
+            Map<String, Object> venueCacheStats = new HashMap<>();
+            venueCacheStats.put("hitRate", venueStats.hitRate() * 100);
+            venueCacheStats.put("hitCount", venueStats.hitCount());
+            venueCacheStats.put("missCount", venueStats.missCount());
+            venueCacheStats.put("requestCount", venueStats.requestCount());
+            stats.put("venueCache", venueCacheStats);
         } catch (Exception e) {
             stats.put("venueCache", "No data yet");
         }

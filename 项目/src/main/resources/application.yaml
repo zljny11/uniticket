@@ -18,6 +18,24 @@ spring:
         max-idle: 10
         min-idle: 1
         time-between-eviction-runs: 10s
+  kafka:
+    bootstrap-servers: 127.0.0.1:19092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: seckill-order-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: com.uniticket.entity
+        spring.json.value.default.type: com.uniticket.entity.TicketOrder
+        spring.json.use.type.headers: false
+    listener:
+      ack-mode: manual
   jackson:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
 mybatis-plus:
@@ -25,3 +43,10 @@ mybatis-plus:
 logging:
   level:
     com.uniticket: debug
+order:
+  payment-timeout-minutes: 15
+  timeout-scan-batch-size: 200
+kafka:
+  topic:
+    seckill-order: seckill-order
+    order-timeout: order-timeout

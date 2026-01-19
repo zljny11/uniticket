@@ -12,16 +12,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
+import org.springframework.beans.factory.annotation.Value;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.List;
+
+import static com.uniticket.utils.RedisConstants.TICKET_ORDER_KEY;
+import static com.uniticket.utils.RedisConstants.TICKET_STOCK_KEY;
 
 /**
  * <p>
@@ -45,6 +50,15 @@ public class VoucherOrderServiceImpl extends ServiceImpl<TicketOrderMapper, Tick
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
+    @Value("${kafka.topic.seckill-order}")
+    private String seckillOrderTopic;
+
+    @Value("${kafka.topic.order-timeout}")
+    private String orderTimeoutTopic;
+
     // Lua脚本
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
     static {
@@ -53,53 +67,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<TicketOrderMapper, Tick
         SECKILL_SCRIPT.setResultType(Long.class);
     }
 
-    // 存储订单的阻塞队列,参数为队列长度
-    private BlockingQueue<TicketOrder> orderTasks = new ArrayBlockingQueue<>(1024 * 1024);
-
-    // 执行任务的线程池, cmd+shift+U 转换大写
-    private static final ExecutorService SECKILL_ORDER_EXECUTOR = Executors.newSingleThreadExecutor();
-
-    // 任务
-    private class VoucherOrderHandler implements Runnable {
-        @Override
-        public void run() {
-            while (true) { // 并不会对CPU造成负担,因为下面有take
-                // 从阻塞队列中获取订单信息，完成库存扣减和订单生成
-                try {
-                    // take() 获取和删除该队列的头部,如果需要则等待直到元素可用
-                    TicketOrder ticketOrder = orderTasks.take();
-                    handleVoucherOrder(ticketOrder);
-                } catch (Exception e) {
-                    log.error("处理订单异常", e);
-                }
-            }
-        }
-    }
-
-    // 完成库存扣减和订单生成
-    private void handleVoucherOrder(TicketOrder ticketOrder) {
-        // 在Redis已经做了库存是否充足和一人一单的校验,能够到这里说明用户已经秒杀成功了,所以这里其实不需要加锁
-        // 1.扣减库存
-        boolean success = seckillVoucherService.update()
-                .setSql("stock = stock - 1")
-                .eq("voucher_id", ticketOrder.getVoucherId())
-                .gt("stock", 0)
-                .update();
-        if (!success) {
-            // 扣减库存失败
-            log.error("库存不足");
-            return;
-        }
-        // 2.创建订单
-        save(ticketOrder);
-    }
-
-    // 当前类初始化完毕就立马执行该方法
-    @PostConstruct
-    private void init() {
-        // 执行线程任务
-        SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
-    }
 
     /**
      * 抢购秒杀票（异步方式）
@@ -122,12 +89,28 @@ public class VoucherOrderServiceImpl extends ServiceImpl<TicketOrderMapper, Tick
         }
         // 有购买资格
         long orderId = redisIdWorker.nextId("order");
-        // 2.保存信息到阻塞队列,会有一个线程不断从当中取出信息,执行扣库存和生成订单
         TicketOrder ticketOrder = new TicketOrder();
         ticketOrder.setId(orderId);    // 订单ID
         ticketOrder.setUserId(userId); // 用户ID
         ticketOrder.setVoucherId(ticketId); // 优惠券ID
-        orderTasks.add(ticketOrder);
+        try {
+            ListenableFuture<SendResult<String, Object>> future =
+                    kafkaTemplate.send(seckillOrderTopic, ticketId.toString(), ticketOrder);
+            future.addCallback(new ListenableFutureCallback<SendResult<String, Object>>() {
+                @Override
+                public void onFailure(Throwable ex) {
+                    log.error("kafka sendMessage error, topic={}, data={}", seckillOrderTopic, ticketOrder, ex);
+                }
+
+                @Override
+                public void onSuccess(SendResult<String, Object> result) {
+                    log.info("kafka sendMessage success topic={}, data={}", seckillOrderTopic, ticketOrder);
+                }
+            });
+        } catch (Exception e) {
+            log.error("kafka sendMessage failed, topic={}, data={}", seckillOrderTopic, ticketOrder, e);
+            return Result.fail("下单失败");
+        }
         return Result.ok(orderId);
     }
 
@@ -161,5 +144,128 @@ public class VoucherOrderServiceImpl extends ServiceImpl<TicketOrderMapper, Tick
         save(ticketOrder);
         // 7、返回订单id
         return Result.ok(orderId);
+    }
+
+    @Transactional
+    @Override
+    public void handleVoucherOrder(TicketOrder ticketOrder) {
+        if (ticketOrder == null || ticketOrder.getUserId() == null || ticketOrder.getVoucherId() == null) {
+            log.warn("订单消息缺少关键字段，忽略处理");
+            return;
+        }
+        // 幂等性保证：数据库唯一索引 (user_id, voucher_id) 防止重复订单
+        // 通过捕获 DuplicateKeyException 处理 Kafka 消息重复投递场景
+        try {
+            boolean success = seckillVoucherService.update()
+                    .setSql("stock = stock - 1")
+                    .eq("voucher_id", ticketOrder.getVoucherId())
+                    .gt("stock", 0)
+                    .update();
+            if (!success) {
+                log.warn("库存不足，订单创建失败 userId={}, voucherId={}",
+                        ticketOrder.getUserId(), ticketOrder.getVoucherId());
+                return;
+            }
+            save(ticketOrder);
+            log.info("订单创建成功 orderId={}, userId={}, voucherId={}",
+                    ticketOrder.getId(), ticketOrder.getUserId(), ticketOrder.getVoucherId());
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // 幂等性生效：Kafka 重复投递导致的唯一键冲突
+            log.info("幂等性拦截：重复订单已忽略 orderId={}, userId={}, voucherId={}",
+                    ticketOrder.getId(), ticketOrder.getUserId(), ticketOrder.getVoucherId());
+        }
+    }
+
+    @Override
+    public void closeExpiredOrders(int expireMinutes, int batchSize) {
+        LocalDateTime expireTime = LocalDateTime.now().minusMinutes(expireMinutes);
+        List<TicketOrder> expiredOrders = list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TicketOrder>()
+                .eq(TicketOrder::getStatus, 1)
+                .isNull(TicketOrder::getPayTime)
+                .le(TicketOrder::getCreateTime, expireTime)
+                .orderByAsc(TicketOrder::getCreateTime)
+                .last("LIMIT " + batchSize));
+
+        if (expiredOrders.isEmpty()) {
+            return;
+        }
+
+        for (TicketOrder order : expiredOrders) {
+            closeSingleOrder(order);
+        }
+    }
+
+    private void closeSingleOrder(TicketOrder order) {
+        int updated = getBaseMapper().update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TicketOrder>()
+                        .eq(TicketOrder::getId, order.getId())
+                        .eq(TicketOrder::getStatus, 1)
+                        .set(TicketOrder::getStatus, 4));
+        if (updated <= 0) {
+            return;
+        }
+
+        try {
+            kafkaTemplate.send(orderTimeoutTopic, String.valueOf(order.getId()), order);
+        } catch (Exception e) {
+            log.error("kafka send order-timeout failed orderId={}", order.getId(), e);
+        }
+        log.info("order closed orderId={}, voucherId={}", order.getId(), order.getVoucherId());
+    }
+
+    @Override
+    public void releaseStockForTimeoutOrder(TicketOrder order) {
+        if (order == null || order.getVoucherId() == null || order.getUserId() == null) {
+            log.warn("timeout order missing fields, skip release");
+            return;
+        }
+
+        Long removed = stringRedisTemplate.opsForSet()
+                .remove(TICKET_ORDER_KEY + order.getVoucherId(), order.getUserId());
+        if (removed == null || removed <= 0) {
+            log.info("skip stock release, order already handled orderId={}", order.getId());
+            return;
+        }
+
+        try {
+            stringRedisTemplate.opsForValue().increment(TICKET_STOCK_KEY + order.getVoucherId(), 1);
+        } catch (Exception e) {
+            log.warn("redis stock rollback failed orderId={}", order.getId(), e);
+        }
+
+        boolean stockRollback = seckillVoucherService.update()
+                .setSql("stock = stock + 1")
+                .eq("voucher_id", order.getVoucherId())
+                .update();
+        if (!stockRollback) {
+            log.warn("db stock rollback failed orderId={}, voucherId={}", order.getId(), order.getVoucherId());
+        }
+    }
+
+    @Override
+    public boolean markOrderPaid(Long orderId, Integer payType, LocalDateTime payTime) {
+        int updated = getBaseMapper().update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TicketOrder>()
+                        .eq(TicketOrder::getId, orderId)
+                        .eq(TicketOrder::getStatus, 1)
+                        .set(TicketOrder::getStatus, 2)
+                        .set(TicketOrder::getPayType, payType)
+                        .set(TicketOrder::getPayTime, payTime));
+        if (updated > 0) {
+            log.info("order paid success orderId={}", orderId);
+            return true;
+        }
+
+        TicketOrder current = getById(orderId);
+        if (current != null && Integer.valueOf(4).equals(current.getStatus())) {
+            log.warn("order already closed, refund required orderId={}", orderId);
+            triggerRefundForClosedOrder(current);
+        }
+        return false;
+    }
+
+    private void triggerRefundForClosedOrder(TicketOrder order) {
+        // TODO: integrate with payment gateway refund API
+        log.info("trigger refund for closed orderId={}, payType={}", order.getId(), order.getPayType());
     }
 }

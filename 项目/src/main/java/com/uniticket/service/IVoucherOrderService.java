@@ -18,4 +18,12 @@ public interface IVoucherOrderService extends IService<TicketOrder> {
     Result flashSaleTicket(Long ticketId);
 
     Result createTicketOrder(Long ticketId);
+
+    void handleVoucherOrder(TicketOrder ticketOrder);
+
+    void closeExpiredOrders(int expireMinutes, int batchSize);
+
+    void releaseStockForTimeoutOrder(TicketOrder ticketOrder);
+
+    boolean markOrderPaid(Long orderId, Integer payType, java.time.LocalDateTime payTime);
 }
