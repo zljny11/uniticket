@@ -60,3 +60,9 @@ rate-limit:
   venue:
     window-ms: 10000
     max-requests: 30
+jwt:
+  issuer: uniticket
+  secret: uniticket-jwt-secret-change-me
+  access-ttl-minutes: 15
+  refresh-ttl-days: 14
+  refresh-buffer-seconds: 30

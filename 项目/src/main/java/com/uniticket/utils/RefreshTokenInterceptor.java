@@ -1,26 +1,25 @@
 package com.uniticket.utils;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import com.uniticket.dto.AccessTokenClaims;
 import com.uniticket.dto.UserDTO;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import com.uniticket.exception.InvalidTokenException;
+import com.uniticket.exception.TokenExpiredException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import static com.uniticket.utils.RedisConstants.LOGIN_USER_KEY;
-import static com.uniticket.utils.RedisConstants.LOGIN_USER_TTL;
-
 @Component  // 让Spring管理这个拦截器
 public class RefreshTokenInterceptor implements HandlerInterceptor {
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
+
+    private final JwtUtil jwtUtil;
+
+    public RefreshTokenInterceptor(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 1、获取token，并判断token是否存在
@@ -29,19 +28,16 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
             // token不存在，说明当前用户未登录，不需要刷新直接放行
             return true;
         }
-        //2.用token获取redis中用户 entries相当于getAll
-        Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(LOGIN_USER_KEY + token);
-        //3.判断用户是否存在
-        if (userMap.isEmpty()) {
-            //4.不存在，说明当前用户未登录，不需要刷新直接放行
-            return true;
+        try {
+            AccessTokenClaims claims = jwtUtil.parseAccessToken(token);
+            UserDTO userDTO = new UserDTO();
+            userDTO.setId(claims.getUserId());
+            UserHolder.saveUser(userDTO);
+        } catch (TokenExpiredException e) {
+            request.setAttribute(AuthConstants.AUTH_ERROR_ATTR, AuthConstants.AUTH_ERROR_EXPIRED);
+        } catch (InvalidTokenException e) {
+            request.setAttribute(AuthConstants.AUTH_ERROR_ATTR, AuthConstants.AUTH_ERROR_INVALID);
         }
-        //5.将查询得到hash转化成dto
-        UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
-        //6.刷新token有效期
-        stringRedisTemplate.expire(LOGIN_USER_KEY + token, LOGIN_USER_TTL, TimeUnit.MINUTES);
-        //7.存在，保存用户信息到ThreadLocal
-        UserHolder.saveUser((UserDTO) userDTO);
         return true;
     }
 

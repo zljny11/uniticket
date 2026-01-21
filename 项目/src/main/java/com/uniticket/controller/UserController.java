@@ -1,6 +1,7 @@
 package com.uniticket.controller;
 
 
+import com.uniticket.annotation.Anonymous;
 import com.uniticket.dto.LoginFormDTO;
 import com.uniticket.dto.Result;
 import com.uniticket.dto.UserDTO;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 /**
@@ -37,6 +37,7 @@ public class UserController {
     /**
      * 发送手机验证码
      */
+    @Anonymous
     @PostMapping("code")
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         // TODO 发送短信验证码并保存验证码
@@ -47,6 +48,7 @@ public class UserController {
      * 登录功能
      * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
      */
+    @Anonymous
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
         return userService.login(loginForm, session);
@@ -57,9 +59,9 @@ public class UserController {
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(HttpServletRequest request){
-        String token = request.getHeader("authorization");
-        return userService.logout(token);
+    public Result logout(){
+        UserDTO user = UserHolder.getUser();
+        return userService.logout(user != null ? user.getId() : null);
     }
 
     @GetMapping("/me")

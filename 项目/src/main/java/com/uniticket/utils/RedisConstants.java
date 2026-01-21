@@ -26,6 +26,28 @@ public class RedisConstants {
     public static final String LOGIN_USER_KEY = "uniticket:login:token:";
     public static final Long LOGIN_USER_TTL = 36000L;
 
+    // ==================== Refresh Token ====================
+    /**
+     * Refresh Token Key
+     * Format: uniticket:auth:refresh:{token}
+     */
+    public static final String REFRESH_TOKEN_KEY = "uniticket:auth:refresh:";
+    /**
+     * Refresh Token Set Key per User
+     * Format: uniticket:auth:refresh:user:{userId}
+     */
+    public static final String REFRESH_TOKEN_USER_SET_KEY = "uniticket:auth:refresh:user:";
+    /**
+     * Rotated Token Buffer Key
+     * Format: uniticket:auth:refresh:rotated:{oldToken}
+     */
+    public static final String REFRESH_TOKEN_ROTATED_KEY = "uniticket:auth:refresh:rotated:";
+    /**
+     * Revoked Token Marker Key
+     * Format: uniticket:auth:refresh:revoked:{oldToken}
+     */
+    public static final String REFRESH_TOKEN_REVOKED_KEY = "uniticket:auth:refresh:revoked:";
+
     // ==================== Cache Configuration ====================
     /**
      * 缓存空值的 TTL (防止缓存穿透)
