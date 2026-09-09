@@ -11,12 +11,29 @@ UniTicket is an API-first platform for campus venue browsing, ticket publishing,
 ## Architecture
 
 ~~~mermaid
-flowchart LR
-    C["Client"] --> B["Spring Boot"]
-    B --> R["Redis + Lua"]
-    R --> K["Kafka"]
-    K --> D["MySQL"]
-    B --> A["Campus-AI"]
+
+flowchart TD
+    C["Web / Mobile Client"] --> N["Nginx"]
+    N --> API["Spring Boot REST API"]
+    API --> G["JWT Authentication<br/>Layered Rate Limiting"]
+
+    G --> READ["Venue & Event Queries"]
+    READ --> L1["Caffeine L1 Cache"]
+    L1 --> L2["Redis L2 Cache"]
+    L2 --> DB["MySQL"]
+
+    G --> ORDER["Flash-Sale Ordering"]
+    ORDER --> LUA["Redis Lua<br/>Stock + One-Order Check"]
+    LUA --> K["Kafka"]
+    K --> W["Transactional Order Consumer"]
+    W --> DB
+
+    JOB["Scheduled Reconciliation"] --> DB
+    JOB --> L2
+
+    API --> AI["Campus-AI FastAPI"]
+    AI --> F["Ollama Embeddings + FAISS"]
+    AI --> LLM["DeepSeek-V3"]
 ~~~
 
 ## Key Features
