@@ -4,30 +4,29 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+### Spring / Java ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
+*.class
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
+.ideaDataSources/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+### Build tools ###
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+dist/
+nbbuild/
+nbdist/
+nbproject/private/
 
 ### VS Code ###
 .vscode/
@@ -35,7 +34,13 @@ build/
 ### macOS ###
 .DS_Store
 
-### Other ###
-*.zip
-*.jmx
+### Local test artifacts ###
+.seckill_*
+jmeter.log
+*.jtl
+*.log
+
+### Local tooling ###
+dataSources/
 .claude/
+*.zip
