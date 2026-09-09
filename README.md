@@ -8,10 +8,9 @@ Java 8 · Spring Boot · MySQL · Redis · Kafka · Caffeine · Lua · Docker
 
 UniTicket is an API-first platform for campus venue browsing, ticket publishing, authentication, and high-concurrency ordering. It separates fast request admission from database persistence and uses Redis, Kafka, and scheduled reconciliation to maintain order and inventory consistency.
 
-## Architecture
+## System Architecture
 
 ~~~mermaid
-
 flowchart TD
     C["Web / Mobile Client"] --> N["Nginx"]
     N --> API["Spring Boot REST API"]
@@ -90,7 +89,7 @@ Requirements: JDK 8+, Maven, MySQL, Redis, and Docker Compose.
 
 ~~~bash
 git clone https://github.com/zljny11/uniticket.git
-cd uniticket/项目
+cd uniticket/backend
 
 mysql -u root -p uniticket < ../uniticket.sql
 docker compose up -d
@@ -112,26 +111,29 @@ The API starts on http://localhost:8081; Kafka is exposed on localhost:19092.
 ## Repository Structure
 
 ~~~text
-项目/
-├── src/main/java/com/uniticket/
-│   ├── controller/    REST APIs
-│   ├── service/       order and cache logic
-│   ├── mq/            Kafka consumers
-│   ├── ratelimit/     traffic protection
-│   └── job/           reconciliation jobs
-├── src/main/resources/
-│   ├── mapper/        Redis Lua scripts
-│   └── db/            database scripts
-├── docker-compose.yml
-└── pom.xml
+.
+├── backend/
+│   ├── src/main/java/com/uniticket/
+│   │   ├── controller/    REST APIs
+│   │   ├── service/       order and cache logic
+│   │   ├── mq/            Kafka consumers
+│   │   ├── ratelimit/     traffic protection
+│   │   └── job/           reconciliation jobs
+│   ├── src/main/resources/
+│   │   ├── mapper/        Redis Lua scripts
+│   │   └── db/            database migrations
+│   ├── docker-compose.yml
+│   └── pom.xml
+├── deploy/
+│   └── nginx.conf
+└── uniticket.sql
 ~~~
 
 ## Core Implementations
 
-- [Asynchronous order service](项目/src/main/java/com/uniticket/service/impl/VoucherOrderServiceImpl.java)
-- [Atomic Redis Lua admission](项目/src/main/resources/mapper/seckill.lua)
-- [Kafka order consumer](项目/src/main/java/com/uniticket/mq/SeckillVoucherConsumer.java)
-- [Scheduled reconciliation](项目/src/main/java/com/uniticket/job/OrderAutoCloseJob.java)
-- [Caffeine + Redis cache](项目/src/main/java/com/uniticket/service/MultiLevelCacheService.java)
-- [Rate limiting](项目/src/main/java/com/uniticket/ratelimit/RateLimiterService.java)
-
+- [Asynchronous order service](backend/src/main/java/com/uniticket/service/impl/VoucherOrderServiceImpl.java)
+- [Atomic Redis Lua admission](backend/src/main/resources/mapper/seckill.lua)
+- [Kafka order consumer](backend/src/main/java/com/uniticket/mq/SeckillVoucherConsumer.java)
+- [Scheduled reconciliation](backend/src/main/java/com/uniticket/job/OrderAutoCloseJob.java)
+- [Caffeine + Redis cache](backend/src/main/java/com/uniticket/service/MultiLevelCacheService.java)
+- [Rate limiting](backend/src/main/java/com/uniticket/ratelimit/RateLimiterService.java)
